@@ -1,6 +1,6 @@
 from crontab import CronTab
 
-my_cron = CronTab(user='hoanghiepnguyen')
+my_cron = CronTab(user="hiep")
 
 file = open('last_tweet_id.txt', 'r')
 last_tweet_id = file.readline()
