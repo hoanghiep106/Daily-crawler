@@ -119,7 +119,7 @@ avaliable_cmds = {
 
 	}, 'SEARCH': {
 		'query' : {
-			'value': None,
+			'value': 'Gold Coast',
 			'validation': lambda x: x != None
 		},
 		'lang' : {
@@ -130,7 +130,6 @@ avaliable_cmds = {
 		},
 		'since_id': {
 			'value': None,
-			'validation': lambda x: x != None
 		},
 		'bucket': {
 			'value': 'tweets'

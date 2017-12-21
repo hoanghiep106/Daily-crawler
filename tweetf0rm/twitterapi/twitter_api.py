@@ -8,7 +8,7 @@ You can use this raw class, but normally you will use a script in the scripts fo
 import logging
 from db import db
 
-mongo = db['test_tweet']
+mongo = db['daily_tweets']
 
 logger = logging.getLogger(__name__)
 
@@ -174,8 +174,9 @@ class TwitterAPI(twython.Twython):
 					'screen_name': friend['screen_name'],
 					'location': friend['location']
 				}
+				print(data)
 				friend_list.append(data)
-			print(data)
+
 			mongo.users.update_one({'id': int(user_id)}, {'$set': {'friends': friend_list}})
 
 		logger.debug("finished find_all_friends for %s..."%(user_id))
@@ -343,7 +344,7 @@ class TwitterAPI(twython.Twython):
 
 		return users
 
-	def search_by_query(self, query = None, geocode=None, lang=None, key=None, write_to_handlers=[], cmd_handlers=[], bucket="tweets"):
+	def search_by_query(self, query = None, geocode=None, lang=None, key=None, since_id=None, write_to_handlers=[], cmd_handlers=[], bucket="tweets"):
 
 		if not query:
 			raise Exception("search: query cannot be None")
@@ -409,7 +410,8 @@ class TwitterAPI(twython.Twython):
 							mongo['tweets'].insert_one(tweet)
 						except:
 							continue
-						last_tweet_id = tweet['id']
+						if tweet['id'] is None:
+							last_tweet_id = tweet['id']
 						print(tweet['id'])
 					if int(tweet['user']['id']) not in user_ids:
 						user_ids.append(int(tweet['user']['id']))
