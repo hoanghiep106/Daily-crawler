@@ -7,11 +7,12 @@ last_tweet_id = file.readline()
 file.close()
 
 cd_to_directory = 'cd Project/tweetf0rm/'
+# crawl_proxies = 'python crawl_proxies.py'
+run_script = 'sh client.sh -c config.json -cmd SEARCH -q="Gold Coast" -si=' + last_tweet_id
+command = [cd_to_directory, run_script]
 
-job = my_cron.new(command=cd_to_directory + ' && sh client.sh -c config.json -cmd SEARCH -q="Gold Coast" -si=' + last_tweet_id
-                          + ' && sh client.sh -c config.json -cmd BATCH_CRAWL_FRIENDS -d 1 -dt "ids" -j user_ids.json'
-                          + ' && sh client.sh -c config.json -cmd BATCH_CRAWL_USER_TIMELINE -j user_ids.json')
-job.minute.every(24)
+job = my_cron.new(command=' && '.join(command))
+job.hour.every(24)
 my_cron.write()
 
 # for job in my_cron:

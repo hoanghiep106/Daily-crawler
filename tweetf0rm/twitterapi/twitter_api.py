@@ -6,6 +6,9 @@ You can use this raw class, but normally you will use a script in the scripts fo
 '''
 
 import logging
+from db import db
+
+mongo = db['test_tweet']
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +50,6 @@ class TwitterAPI(twython.Twython):
 		kwargs.update(apikeys)
 
 		super(TwitterAPI, self).__init__(*args, **kwargs)
-
-		
 
 	def rate_limit_error_occured(self, resource, api):
 		rate_limits = self.get_application_rate_limit_status(resources=[resource])
@@ -143,11 +144,14 @@ class TwitterAPI(twython.Twython):
 			try:
 				friends = self.get_friends_list(user_id=user_id, cursor=cursor, count=200)
 
+				for friend in friends:
+					print(friend['location'])
+
 				for handler in write_to_handlers:
 					handler.append(json.dumps(friends), bucket=bucket, key=user_id)
 
 				for handler in cmd_handlers:
-					handler.append(json.dumps(friends), bucket=bucket, key=user_id) 
+					handler.append(json.dumps(friends), bucket=bucket, key=user_id)
 
 				cursor = int(friends['next_cursor'])
 
@@ -162,6 +166,17 @@ class TwitterAPI(twython.Twython):
 				retry_cnt -= 1
 				if (retry_cnt == 0):
 					raise MaxRetryReached("max retry reached due to %s"%(exc))
+
+			friend_list = []
+			for friend in friends['users']:
+				data = {
+					'id': friend['id'],
+					'screen_name': friend['screen_name'],
+					'location': friend['location']
+				}
+				friend_list.append(data)
+			print(data)
+			mongo.users.update_one({'id': int(user_id)}, {'$set': {'friends': friend_list}})
 
 		logger.debug("finished find_all_friends for %s..."%(user_id))
 
@@ -196,6 +211,8 @@ class TwitterAPI(twython.Twython):
 				retry_cnt -= 1
 				if (retry_cnt == 0):
 					raise MaxRetryReached("max retry reached due to %s"%(exc))
+
+			print(friend_ids["ids"])
 
 		logger.debug("finished find_all_friend_ids for %s..."%(user_id))
 
@@ -249,11 +266,7 @@ class TwitterAPI(twython.Twython):
 
 		if (len(timeline) > 0):
 			for tweet in timeline:
-				for handler in write_to_handlers:
-					handler.append(json.dumps(tweet), bucket=bucket, key=user_id)
-
-				for handler in cmd_handlers:
-					handler.append(json.dumps(tweet), bucket=bucket, key=user_id)
+				mongo.db.tweets.insertOne(tweet)
 		else:
 			for handler in write_to_handlers:
 				handler.append(json.dumps({}), bucket=bucket, key=user_id)
@@ -386,17 +399,26 @@ class TwitterAPI(twython.Twython):
 
 			if (len(result_tweets) > 0):
 				user_ids = []
+				tweet_ids = []
 				last_tweet_id = None
 				for tweet in result_tweets:
-					last_tweet_id = tweet['id']
+					if int(tweet['id']) not in tweet_ids:
+						tweet_ids.append(int(tweet['id']))
+						tweet['_id'] = tweet['id']
+						try:
+							mongo['tweets'].insert_one(tweet)
+						except:
+							continue
+						last_tweet_id = tweet['id']
+						print(tweet['id'])
 					if int(tweet['user']['id']) not in user_ids:
 						user_ids.append(int(tweet['user']['id']))
-					# Write to more files here
-					for handler in write_to_handlers:
-						handler.append(json.dumps(tweet), bucket=bucket, key=key)
-
-					for handler in cmd_handlers:
-						handler.append(json.dumps(tweet), bucket=bucket, key=key)
+						tweet['user']['_id'] = tweet['user']['id']
+						try:
+							mongo['users'].insert_one(tweet['user'])
+							self.find_all_friends(tweet['user']['id'])
+						except:
+							continue
 
 				with open('user_ids.json', 'w') as outfile1:
 					json.dump(user_ids, outfile1)
@@ -407,6 +429,3 @@ class TwitterAPI(twython.Twython):
 					handler.append(json.dumps({}), bucket=bucket, key=key)
 
 		logger.info("[%s] total tweets: %d "%(query, cnt))
-
-
-		
