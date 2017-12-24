@@ -18,6 +18,10 @@ from tweetf0rm.exceptions import NotImplemented
 
 pp = pprint.PrettyPrinter(indent=4)
 
+last_tweet_id = open('last_tweet_id.txt').read()
+if last_tweet_id == 'null':
+	last_tweet_id = None
+
 avaliable_cmds = {
 	'CRAWL_FRIENDS': {
 		'user_id' : {
@@ -129,7 +133,7 @@ avaliable_cmds = {
 			'value': str(datetime.date.today())
 		},
 		'since_id': {
-			'value': None,
+			'value': last_tweet_id,
 		},
 		'bucket': {
 			'value': 'tweets'

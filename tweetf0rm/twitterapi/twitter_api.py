@@ -168,22 +168,23 @@ class TwitterAPI(twython.Twython):
 					raise MaxRetryReached("max retry reached due to %s"%(exc))
 
 			friend_location = []
-			friend_location_count = []
+			friend_location_count = {}
 			for friend in friends['users']:
-				if friend['location'] not in friend_location:
-					friend_location.append(friend['location'])
-					friend_location_count[friend['location']] = {
-						'name': friend['location'],
-						'counter': 1
-					}
-				else:
-					friend_location_count[friend['location']]["counter"] += 1
+				if friend['location'] != '':
+					if friend['location'] not in friend_location:
+						friend_location.append(friend['location'])
+						friend_location_count[friend['location']] = {
+							'name': friend['location'],
+							'counter': 1
+						}
+					else:
+						friend_location_count[friend['location']]["counter"] += 1
 
 			location_max = friend_location_count[friend_location[0]]
 			for location in friend_location:
 				if friend_location_count[location]["counter"] > location_max["counter"]:
 					location_max = friend_location_count[location]
-
+			print(location_max)
 			mongo.users.update_one({'id': int(user_id)}, {'$set': {'location': location_max['name']}})
 
 		logger.debug("finished find_all_friends for %s..."%(user_id))
@@ -420,7 +421,7 @@ class TwitterAPI(twython.Twython):
 						else:
 							if tweet['id'] is None:
 								last_tweet_id = tweet['id']
-							print(tweet['id'])
+							print('Tweet: ' + tweet['text'])
 							if int(tweet['user']['id']) not in user_ids:
 								user_ids.append(int(tweet['user']['id']))
 								tweet['user']['_id'] = tweet['user']['id']
@@ -429,7 +430,9 @@ class TwitterAPI(twython.Twython):
 								except:
 									continue
 								else:
+									print('User: ' + tweet['user']['screen_name'])
 									if tweet['user']['location'] is None or tweet['user']['location'] == '':
+										print('No location. Fetching friends to infer...')
 										self.find_all_friends(tweet['user']['id'])
 
 				with open('user_ids.json', 'w') as outfile1:
