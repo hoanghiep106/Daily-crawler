@@ -167,17 +167,24 @@ class TwitterAPI(twython.Twython):
 				if (retry_cnt == 0):
 					raise MaxRetryReached("max retry reached due to %s"%(exc))
 
-			friend_list = []
+			friend_location = []
+			friend_location_count = []
 			for friend in friends['users']:
-				data = {
-					'id': friend['id'],
-					'screen_name': friend['screen_name'],
-					'location': friend['location']
-				}
-				print(data)
-				friend_list.append(data)
+				if friend['location'] not in friend_location:
+					friend_location.append(friend['location'])
+					friend_location_count[friend['location']] = {
+						'name': friend['location'],
+						'counter': 1
+					}
+				else:
+					friend_location_count[friend['location']]["counter"] += 1
 
-			mongo.users.update_one({'id': int(user_id)}, {'$set': {'friends': friend_list}})
+			location_max = friend_location_count[friend_location[0]]
+			for location in friend_location:
+				if friend_location_count[location]["counter"] > location_max["counter"]:
+					location_max = friend_location_count[location]
+
+			mongo.users.update_one({'id': int(user_id)}, {'$set': {'location': location_max['name']}})
 
 		logger.debug("finished find_all_friends for %s..."%(user_id))
 
@@ -410,17 +417,20 @@ class TwitterAPI(twython.Twython):
 							mongo['tweets'].insert_one(tweet)
 						except:
 							continue
-						if tweet['id'] is None:
-							last_tweet_id = tweet['id']
-						print(tweet['id'])
-					if int(tweet['user']['id']) not in user_ids:
-						user_ids.append(int(tweet['user']['id']))
-						tweet['user']['_id'] = tweet['user']['id']
-						try:
-							mongo['users'].insert_one(tweet['user'])
-							self.find_all_friends(tweet['user']['id'])
-						except:
-							continue
+						else:
+							if tweet['id'] is None:
+								last_tweet_id = tweet['id']
+							print(tweet['id'])
+							if int(tweet['user']['id']) not in user_ids:
+								user_ids.append(int(tweet['user']['id']))
+								tweet['user']['_id'] = tweet['user']['id']
+								try:
+									mongo['users'].insert_one(tweet['user'])
+								except:
+									continue
+								else:
+									if tweet['user']['location'] is None or tweet['user']['location'] == '':
+										self.find_all_friends(tweet['user']['id'])
 
 				with open('user_ids.json', 'w') as outfile1:
 					json.dump(user_ids, outfile1)
