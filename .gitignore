@@ -1,6 +1,7 @@
 # Created by http://gitignore.io
 
 config.json
+proxies.json
 
 ### Python ###
 *.py[cod]
