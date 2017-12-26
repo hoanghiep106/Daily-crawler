@@ -419,8 +419,7 @@ class TwitterAPI(twython.Twython):
 						except:
 							continue
 						else:
-							if tweet['id'] is None:
-								last_tweet_id = tweet['id']
+							last_tweet_id = tweet['id']
 							print('Tweet: ' + tweet['text'])
 							if int(tweet['user']['id']) not in user_ids:
 								user_ids.append(int(tweet['user']['id']))
@@ -434,9 +433,6 @@ class TwitterAPI(twython.Twython):
 									if tweet['user']['location'] is None or tweet['user']['location'] == '':
 										print('No location. Fetching friends to infer...')
 										self.find_all_friends(tweet['user']['id'])
-
-				with open('user_ids.json', 'w') as outfile1:
-					json.dump(user_ids, outfile1)
 				with open('last_tweet_id.txt', 'w') as outfile2:
 					json.dump(last_tweet_id, outfile2)
 			else:
